@@ -6,4 +6,6 @@ package org.garry.gucie_clone.inject;
  */
 class InternalContext {
 
+    final
+
 }
