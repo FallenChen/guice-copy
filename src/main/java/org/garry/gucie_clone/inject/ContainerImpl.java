@@ -12,6 +12,17 @@ class ContainerImpl implements Container {
     }
 
 
+    interface Injector {
+        void inject(InternalContext context, Object o);
+    }
+
+    static class MissingDependencyException extends Exception {
+        MissingDependencyException(String message) {
+            super(message);
+        }
+    }
+
+
 
     @Override
     public void inject(Object o) {
