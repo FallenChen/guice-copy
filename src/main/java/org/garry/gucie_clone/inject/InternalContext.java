@@ -18,6 +18,30 @@ class InternalContext {
 
     Scope.Strategy scopeStrategy;
 
+    ExternalContext<?> externalContext;
 
+    InternalContext(ContainerImpl container) {
+        this.container = container;
+    }
 
+    public Container getContainer() {
+        return container;
+    }
+
+    ContainerImpl getContainerImpl(){
+        return container;
+    }
+
+    Scope.Strategy getScopeStrategy() {
+        if (scopeStrategy == null) {
+            scopeStrategy = container.localScopeStrategy.get();
+
+            if (scopeStrategy == null) {
+                throw new IllegalStateException("Scope strategy not set. "
+                        + "Please call Container.setScopeStrategy().");
+            }
+        }
+
+        return scopeStrategy;
+    }
 }

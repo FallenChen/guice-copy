@@ -24,5 +24,11 @@ public interface Container {
 
     <T> T getInstance(Class<T> type);
 
+    /**
+     * Sets the scope strategy for the current thread
+     * @param scopeStrategy
+     */
+    void setScopeStrategy(Scope.Strategy scopeStrategy);
 
+    void removeScopeStrategy();
 }
