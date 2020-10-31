@@ -44,4 +44,12 @@ class InternalContext {
 
         return scopeStrategy;
     }
+
+    <T> ExternalContext<T> getExternalContext(){
+        return (ExternalContext)externalContext;
+    }
+
+    void setExternalContext(ExternalContext<?> externalContext){
+        this.externalContext = externalContext;
+    }
 }
