@@ -1,10 +1,11 @@
 package org.garry.gucie_clone.inject.util;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+import java.lang.ref.Reference;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.garry.gucie_clone.inject.util.ReferenceType.STRONG;
 
 /**
  * Concurrent hash map that wraps keys and/or values in soft or weak references.
@@ -30,23 +31,24 @@ import java.util.concurrent.ConcurrentHashMap;
  * @param <K>
  * @param <V>
  */
-public class ReferenceMap<K, V> implements Map<K,V>, Serializable {
+public class ReferenceMap<K, V> implements Map<K, V>, Serializable {
 
     private static final long serialVersionUID = 0;
 
-    transient ConcurrentHashMap<Object,Object> delegate;
+    transient ConcurrentHashMap<Object, Object> delegate;
 
     final ReferenceType keyReferenceType;
     final ReferenceType valueReferenceType;
 
     /**
      * Concurrent hash map that wraps keys and/or values based on specified reference types
+     *
      * @param keyReferenceType
      * @param valueReferenceType
      */
     public ReferenceMap(ReferenceType keyReferenceType, ReferenceType valueReferenceType) {
-        ensureNotNull(keyReferenceType,valueReferenceType);
-        if (keyReferenceType == ReferenceType.PHANTOM || valueReferenceType == ReferenceType.PHANTOM){
+        ensureNotNull(keyReferenceType, valueReferenceType);
+        if (keyReferenceType == ReferenceType.PHANTOM || valueReferenceType == ReferenceType.PHANTOM) {
             throw new IllegalArgumentException("Phantom references not supported.");
         }
 
@@ -55,63 +57,151 @@ public class ReferenceMap<K, V> implements Map<K,V>, Serializable {
         this.valueReferenceType = valueReferenceType;
     }
 
+    static void ensureNotNull(Object o) {
+        if (o == null) {
+            throw new NullPointerException();
+        }
+    }
+
+    static void ensureNotNull(Object... array) {
+        for (int i = 0; i < array.length; i++) {
+            if (array[i] == null) {
+                throw new NullPointerException("Argument #" + i + " is null.");
+            }
+        }
+    }
+
     @Override
     public int size() {
-        return 0;
+        return delegate.size();
     }
 
     @Override
     public boolean isEmpty() {
-        return false;
+        return delegate.isEmpty();
     }
 
     @Override
     public boolean containsKey(Object key) {
-        return false;
+        ensureNotNull(key);
+        Object referenceAwareKey = makeKeyReferenceAware(key);
+        return delegate.containsKey(referenceAwareKey);
     }
 
     @Override
     public boolean containsValue(Object value) {
+        ensureNotNull(value);
+        for (Object valueReference : delegate.values()) {
+            if (value.equals(dereferenceValue(valueReference))) {
+                return true;
+            }
+        }
         return false;
     }
 
     @Override
     public V get(Object key) {
-        return null;
+        ensureNotNull(key);
+        return interanalGet((K) key);
     }
 
     @Override
     public V put(K key, V value) {
-        return null;
+        return execute(putStrategy(), key, value);
     }
 
     @Override
     public V remove(Object key) {
-        return null;
+        ensureNotNull(key);
+        Object referenceAwareKey = makeKeyReferenceAware(key);
+        Object valueReference = delegate.remove(referenceAwareKey);
+        return valueReference == null ? null :
+                (V) dereferenceValue(valueReference);
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-
+        for (Map.Entry<? extends K, ? extends V> entry : m.entrySet()) {
+            put(entry.getKey(), entry.getValue());
+        }
     }
 
     @Override
     public void clear() {
-
+        delegate.clear();
     }
 
     @Override
     public Set<K> keySet() {
-        return null;
+        return Collections.unmodifiableSet(
+                dereferenceValues(delegate.values()));
     }
 
     @Override
     public Collection<V> values() {
-        return null;
+        return Collections.unmodifiableCollection(
+                dereferenceValues(delegate.values()));
     }
 
     @Override
-    public Set<Entry<K, V>> entrySet() {
-        return null;
+    public Set<Map.Entry<K, V>> entrySet() {
+        Set<Map.Entry<K, V>> entrySet = new HashSet<>();
+        for (Map.Entry<Object, Object> entry : delegate.entrySet()) {
+            Map.Entry<K, V> dereferenced = dereferenceEntry(entry);
+            if (dereferenced != null) {
+                entrySet.add(dereferenced);
+            }
+        }
+        return Collections.unmodifiableSet(entrySet);
+    }
+
+
+    /**
+     * Converts a reference to a value
+     */
+    V dereferenceValue(Object o) {
+        return (V) dereference(valueReferenceType, o);
+    }
+
+    /**
+     * Returns the referent for reference given its reference type
+     */
+    Object dereference(ReferenceType referenceType, Object reference) {
+        return referenceType == STRONG ? reference : ((Reference) reference).get();
+    }
+
+    /**
+     * Creates a reference for a value
+     */
+    Object referenceValue(Object keyReference, Object value){
+        switch (valueReferenceType) {
+            case STRONG:return value;
+            case SOFT:return new SoftValueReference(keyReference, value);
+            case WEAK:return new WeakValueReference(keyReference, value);
+            default:throw new AssertionError();
+        }
+    }
+
+    /**
+     * Marker interface to differentiate external and internal
+     */
+    interface InternalReference{}
+
+    class SoftValueReference extends FinalizableSoftReference<Object> implements InternalReference{
+
+        Object keyReference;
+
+        public SoftValueReference(Object keyReference, Object value){
+            super(value);
+            this.keyReference = keyReference;
+        }
+
+        public void finalizeReferent(){
+            delegate.remove(keyReference, this);
+        }
+
+       public boolean equal(Object obj){
+            return referenceEqual(this,obj);
+       }
     }
 }
