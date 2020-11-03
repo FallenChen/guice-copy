@@ -155,6 +155,23 @@ public class ReferenceMap<K, V> implements Map<K, V>, Serializable {
         return Collections.unmodifiableSet(entrySet);
     }
 
+    /**
+     * Dereferences an entry. Returns null if the key or value has been gc'ed
+     * @param entry
+     * @return
+     */
+    Entry dereferenceEntry(Map.Entry<Object, Object> entry) {
+        K key = dereferenceKey(entry.getKey());
+        V value = dereferenceValue(entry.getValue());
+        return (key == null || value == null) ? null : new Entry(key,value);
+    }
+
+    /**
+     * Converts a reference to a key
+     */
+    K dereferenceKey(Object o){
+        return (K)dereference(keyReferenceType, o);
+    }
 
     /**
      * Converts a reference to a value
@@ -203,5 +220,117 @@ public class ReferenceMap<K, V> implements Map<K, V>, Serializable {
        public boolean equal(Object obj){
             return referenceEqual(this,obj);
        }
+    }
+
+    class WeakValueReference extends FinalizableWeakReference<Object> implements InternalReference{
+
+        Object keyReference;
+
+        public WeakValueReference(Object keyReference, Object value){
+            super(value);
+            this.keyReference = keyReference;
+        }
+
+        public void finalizeReferent(){
+            delegate.remove(keyReference,this);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return referenceEqual(this,obj);
+        }
+
+    }
+
+    /**
+     * Test weak and soft references for identity equality. Compares references to
+     * other references and wrappers.If o is a reference,this returns true
+     * if r == o or if r and o reference the same non null object.If o is a
+     * wrapper, this returns true if r's referent is identical to wrapped object
+     * @param r
+     * @param o
+     * @return
+     */
+    static boolean referenceEqual(Reference r, Object o){
+        // compare reference to reference
+        if(o instanceof InternalReference){
+            // are they the same reference? used in cleanup
+            if (o == r){
+                return true;
+            }
+
+            // do they reference identical values? used in conditional puts
+            Object referent = ((Reference) o).get();
+            return referent != null && referent == r.get();
+        }
+        // is the wrapped object identical to referent ? used in lookups
+        return ((ReferenceAwareWrapper)o).unwrap() == r.get();
+    }
+
+    /**
+     * Big hack.Used to compare keys and values to referenced keys and values
+     * without creating more references
+     */
+    static class ReferenceAwareWrapper{
+
+        Object wrapped;
+
+        ReferenceAwareWrapper(Object wrapped){
+            this.wrapped = wrapped;
+        }
+
+        Object unwrap(){
+            return wrapped;
+        }
+
+        public int hashCode(){
+            return wrapped.hashCode();
+        }
+
+        public boolean equals(Object obj){
+            // defer to reference's equals() logic
+            return obj.equals(this);
+        }
+    }
+
+    class Entry implements Map.Entry<K,V>{
+
+        K key;
+        V value;
+
+        public Entry(K key, V value){
+            this.key = key;
+            this.value = value;
+        }
+
+        public K getKey(){
+            return this.key;
+        }
+
+        public V getValue(){
+            return this.value;
+        }
+
+        public V setValue(V value){
+            return put(key,value);
+        }
+
+        public int hashCode(){
+            return key.hashCode() * 31 + value.hashCode();
+        }
+
+        public boolean equals(Object o){
+            if (!(o instanceof ReferenceMap.Entry)){
+                return false;
+            }
+
+            Entry entry = (Entry)o;
+            return key.equals(entry.key) && value.equals(entry.value);
+        }
+
+        public String toString(){
+            return key + "=" + value;
+        }
+
     }
 }
