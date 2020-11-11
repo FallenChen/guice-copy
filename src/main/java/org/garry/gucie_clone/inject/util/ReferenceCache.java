@@ -79,6 +79,32 @@ public abstract class ReferenceCache<K, V> extends ReferenceMap<K,V> {
         }
     }
 
+    /**
+     * If this map does not contain an entry for the given key and {@link #create(Object)}
+     * has been overridden, this method will create a new value, put it in the map, and return it
+     * @param key
+     * @return
+     */
+    @Override
+    public V get(Object key) {
+        V value = super.get(key);
+        return (value == null) ?
+                internalCreate((K)key):
+                value;
+    }
+
+    /**
+     * Cancels the current {@link #create(Object)}.Throw {@link java.util.concurrent.CancellationException}
+     * to all clients currently blocked on {@link #get(Object)}
+     */
+    protected void cancel(){
+        Future<V> future = localFuture.get();
+        if (future == null){
+            throw new IllegalStateException("Not in create()");
+        }
+        future.cancel(false);
+    }
+
     class CallableCreate implements Callable<V> {
 
         K key;

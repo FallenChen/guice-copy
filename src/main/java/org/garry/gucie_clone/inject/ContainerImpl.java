@@ -1,6 +1,8 @@
 package org.garry.gucie_clone.inject;
 
 
+import org.garry.gucie_clone.inject.util.ReferenceCache;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
@@ -305,7 +307,106 @@ class ContainerImpl implements Container {
     }
 
     final Map<Class<?>, List<Injector>> injectors =
-            new ReferenceCache
+            new ReferenceCache<Class<?>, List<Injector>>(){
+                @Override
+                protected List<Injector> create(Class<?> key) {
+                    List<Injector> injectors = new ArrayList<>();
+                    addInjectors(key, injectors);
+                    return injectors;
+                }
+            };
+
+    /**
+     * Recursively adds injectors for fields and methods from the given class
+     * to given list. Injects parent classed before sub classes
+     * @param clazz
+     * @param injectors
+     */
+    void addInjectors(Class clazz, List<Injector> injectors){
+        if (clazz == Object.class){
+            return;
+        }
+
+        // add injectors for superclass first
+        addInjectors(clazz.getSuperclass(), injectors);
+
+        addInjectorsForFields(clazz.getDeclaredFields(), false, injectors);
+        addInjectorsForMethods(clazz.getDeclaredMethods(), false, injectors);
+    }
+
+    void injectStatics(List<Class<?>> staticInjections){
+        final List<Injector> injectors = new ArrayList<>();
+
+        for (Class<?> clazz : staticInjections){
+            addInjectorsForFields(clazz.getDeclaredFields(), true, injectors);
+            addInjectorsForMethods(clazz.getDeclaredMethods(), true, injectors);
+        }
+
+        callInContext(new ContextualCallable<Void>(){
+            @Override
+            public Void call(InternalContext context) {
+                for (Injector injector : injectors){
+                    injector.inject(context, null);
+                }
+                return null;
+            }
+        });
+    }
+
+    void addInjectorsForMethods(Method[] methods, boolean statics,
+                                List<Injector> injectors){
+        addInjectorsForMembers(Arrays.asList(methods), statics, injectors,
+                new InjectorFactory<Method>() {
+                    @Override
+                    public Injector create(ContainerImpl container, Method method,
+                                           String name) throws MissingDependencyException {
+
+                        return new MethodInject(container, method, name);
+                    }
+                });
+    }
+
+    ThreadLocal<InternalContext[]> localContext =
+            new ThreadLocal<InternalContext[]>(){
+                @Override
+                protected InternalContext[] initialValue() {
+                   return new InternalContext[1];
+                }
+            };
+
+    /**
+     * Looks up thread local context. Creates (and removes) a new context if necessary
+     * @param callable
+     * @param <T>
+     * @return
+     */
+    <T> T callInContext(ContextualCallable<T> callable){
+        InternalContext[] reference = localContext.get();
+        if (reference[0] == null){
+            reference[0] = new InternalContext(this);
+            try{
+                return callable.call(reference[0]);
+            }finally {
+                // Only remove the context if this call created it
+                reference[0] = null;
+            }
+        }else {
+            // Someone else will clean up this context
+            return callable.call(reference[0]);
+        }
+    }
+
+    void addInjectorsForFields(Field[] fields, boolean statics,
+                                List<Injector> injectors){
+        addInjectorsForMembers(Arrays.asList(fields), statics, injectors,
+                new InjectorFactory<Field>() {
+                    @Override
+                    public Injector create(ContainerImpl container, Field field,
+                                           String name) throws MissingDependencyException {
+                        return new FieldInjector(container, field, name);
+                    }
+                });
+    }
 
     interface ContextualCallable<T> {
         T call(InternalContext context);
