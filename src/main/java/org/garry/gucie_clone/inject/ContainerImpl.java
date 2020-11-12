@@ -9,6 +9,7 @@ import java.util.*;
 
 class ContainerImpl implements Container {
 
+    // 工厂方法 创建类都可以替代为创建一个接口和工厂 from OnJava8
     final Map<Key<?>, InternalFactory<?>> factories;
 
     ContainerImpl(Map<Key<?>, InternalFactory<?>> factories){
@@ -16,6 +17,9 @@ class ContainerImpl implements Container {
     }
 
 
+    /**
+     * Injects a field or method in a given object
+     */
     interface Injector {
         void inject(InternalContext context, Object o);
     }
@@ -418,12 +422,51 @@ class ContainerImpl implements Container {
 
     @Override
     public void inject(Object o) {
-
+        // 注入到上下文中
+        callInContext(new ContextualCallable<Void>() {
+            @Override
+            public Void call(InternalContext context) {
+                inject(o,context);
+                return null;
+            }
+        });
     }
+
+    void inject(Object o, InternalContext context){
+        List<Injector> injectors = this.injectors.get(o.getClass());
+        for (Injector injector : injectors){
+            injector.inject(context,o);
+        }
+    }
+
+    <T> T inject(Class<T> implementation, InternalContext context){
+        try {
+            ConstructorInjector<T> constructor = getConstructor(implementation);
+            return implementation.cast(constructor.construct(context, implementation));
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Get a constructor function for a given implementation class
+     * @param implementation
+     * @param <T>
+     * @return
+     */
+    <T> ConstructorInjector<T> getConstructor(Class<T> implementation) {
+        return constructors.get(implementation);
+    }
+
 
     @Override
     public <T> T inject(Class<T> implementation) {
-        return null;
+        return callInContext(new ContextualCallable<T>() {
+            @Override
+            public T call(InternalContext context) {
+               return inject(implementation,context);
+            }
+        });
     }
 
     @Override

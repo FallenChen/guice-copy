@@ -10,6 +10,7 @@ import java.util.List;
 
 /**
  * Context of a dependency construction. Used to manage circular references
+ *  依赖构造的上下文，用来管理互相引用
  * @param <T>
  */
 class ConstructionContext<T> {

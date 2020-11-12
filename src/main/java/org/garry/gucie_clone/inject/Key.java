@@ -2,7 +2,8 @@ package org.garry.gucie_clone.inject;
 
 /**
  * todo 为什么不是public
- * Dependency
+ * Dependency mapping key. Uniquely identified by the required type and name
+ * 类的key，必须保证唯一
  *
  * @param <T>
  */

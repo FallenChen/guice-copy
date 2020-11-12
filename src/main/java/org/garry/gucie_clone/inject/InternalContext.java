@@ -16,8 +16,9 @@ class InternalContext {
     final Map<Object, ConstructionContext<?>> constructionContexts =
             new HashMap<>();
 
+    // scope 策略
     Scope.Strategy scopeStrategy;
-
+    // 对外的快照上下文
     ExternalContext<?> externalContext;
 
     InternalContext(ContainerImpl container) {
