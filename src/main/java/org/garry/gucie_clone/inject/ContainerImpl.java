@@ -65,6 +65,7 @@ class ContainerImpl implements Container {
             this.factory = factory;
         }
 
+        // ???
         T inject(Member member, InternalContext context){
             ExternalContext<?> previous = context.getExternalContext();
             context.setExternalContext(externalContext);
@@ -251,7 +252,7 @@ class ContainerImpl implements Container {
                 return found;
             }
 
-            // If no annotated constructor is found, look for a no-arg constructor instrad
+            // If no annotated constructor is found, look for a no-arg constructor instead
             try {
                 return implementation.getDeclaredConstructor();
             } catch (NoSuchMethodException e) {
@@ -260,11 +261,19 @@ class ContainerImpl implements Container {
             }
         }
 
+        /**
+         * Construct an instance. Return {@code Object} instead of {@code T}
+         * because it may return a proxy
+         * @param context
+         * @param expectedType
+         * @return
+         */
         Object construct(InternalContext context, Class<? super T> expectedType) {
             ConstructionContext<T> constructionContext =
                     context.getConstructionContext(this);
 
             // we have a circular reference between constructors. Return a proxy.
+            // 构造一个的时候另一个也在构造，互相引用啦
             if (constructionContext.isConstructing()){
                 // if we can't proxy this object, can we proxy the other object?
                 return constructionContext.createProxy(expectedType);
@@ -458,6 +467,14 @@ class ContainerImpl implements Container {
         return constructors.get(implementation);
     }
 
+    Map<Class<?>, ConstructorInjector> constructors =
+            new ReferenceCache<Class<?>, ConstructorInjector>() {
+                @Override
+                protected ConstructorInjector create(Class<?> implementation) {
+                   return new ConstructorInjector(ContainerImpl.this, implementation);
+                }
+            };
+
 
     @Override
     public <T> T inject(Class<T> implementation) {
@@ -471,11 +488,53 @@ class ContainerImpl implements Container {
 
     @Override
     public <T> T getInstance(Class<T> type, String name) {
-        return null;
+
+        return callInContext(new ContextualCallable<T>() {
+            @Override
+            public T call(InternalContext context) {
+               return getInstance(type,name,context);
+            }
+        });
     }
+
+    <T> T getInstance(Class<T> type, String name, InternalContext context){
+        ExternalContext<?> previous = context.getExternalContext();
+        Key<T> key = Key.newInstance(type, name);
+        context.setExternalContext(ExternalContext.newInstance(null, key,this));
+        try {
+            return getFactory(key).create(context);
+        }finally {
+            // 啥意思
+            context.setExternalContext(previous);
+        }
+    }
+
+
 
     @Override
     public <T> T getInstance(Class<T> type) {
-        return null;
+        return callInContext(new ContextualCallable<T>() {
+            @Override
+            public T call(InternalContext context) {
+               return getInstance(type, context);
+            }
+        });
+    }
+
+    private <T> T getInstance(Class<T> type, InternalContext context) {
+        return getInstance(type, DEFAULT_NAME, context);
+    }
+
+    final ThreadLocal<Scope.Strategy> localScopeStrategy =
+            new ThreadLocal<>();
+
+    @Override
+    public void setScopeStrategy(Scope.Strategy scopeStrategy) {
+        this.localScopeStrategy.set(scopeStrategy);
+    }
+
+    @Override
+    public void removeScopeStrategy() {
+        this.localScopeStrategy.remove();
     }
 }

@@ -53,4 +53,15 @@ class InternalContext {
     void setExternalContext(ExternalContext<?> externalContext){
         this.externalContext = externalContext;
     }
+
+    <T> ConstructionContext<T> getConstructionContext(Object key){
+
+        ConstructionContext constructionContext = constructionContexts.get(key);
+
+        if (constructionContext == null){
+            constructionContext = new ConstructionContext<T>();
+            constructionContexts.put(key,constructionContext);
+        }
+        return constructionContext;
+    }
 }
