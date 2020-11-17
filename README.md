@@ -1,5 +1,5 @@
 # guice-copy
-开源项目clone系列
+开源项目clone系列 
 
 ## mind map
 * What's the problem?
