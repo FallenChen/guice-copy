@@ -1,10 +1,7 @@
 package org.garry.gucie_clone.inject;
 
 import java.lang.reflect.Member;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 
 /**
@@ -134,4 +131,125 @@ public final class ContainerBuilder {
                 Scope.DEFAULT : scoped.value();
         return factory(type, name, implementation, scope);
     }
+
+    /**
+     * Maps an implementation class to a given dependency type and name.
+     * Creates instance using the container,recursively injecting dependencies
+     *
+     * @param type type of dependency
+     * @param name name of dependency
+     * @param implementation class
+     * @param scope scope of injected instances
+     * @param <T>
+     * @return this builder
+     */
+    public <T> ContainerBuilder factory(final Class<T> type, final String name,
+                                        final Class<? extends T> implementation, final Scope scope){
+
+        // This factory creates new instances of the given implementation.
+        // we have to lazy load the constructor because the Container hasn't been created yet
+        InternalFactory<T> factory = new InternalFactory<T>() {
+
+            volatile ContainerImpl.ConstructorInjector<? extends T> constructor;
+
+            @Override
+            public T create(InternalContext context) {
+                if (constructor == null) {
+                    this.constructor =
+                            context.getContainerImpl().getConstructor(implementation);
+                }
+                return (T) constructor.construct(context, type);
+            }
+
+            @Override
+            public String toString() {
+                return new LinkedHashMap<String, Object>() {
+                    {
+                        put("type", type);
+                        put("name", name);
+                        put("implementation", implementation);
+                        put("scope", scope);
+                    }
+                }.toString();
+            }
+        };
+        return factory(Key.newInstance(type, name), factory, scope);
+
+    }
+
+    /**
+     * Maps a dependency. All methods in this class ultimately funnel through here
+     * @param key
+     * @param factory
+     * @param scope
+     * @param <T>
+     * @return
+     */
+    private <T> ContainerBuilder factory(final Key<T> key,
+                                         InternalFactory<? extends T> factory, Scope scope){
+        ensureNotCreated();
+        checkKey(key);
+        final InternalFactory<? extends T> scopedFactory =
+                scope.scopeFactory(key.getType(), key.getName(), factory);
+        factories.put(key, scopedFactory);
+        if (scope == Scope.SINGLETON) {
+            singletonFactories.add(new InternalFactory<T>() {
+                @Override
+                public T create(InternalContext context) {
+                   try {
+                       context.setExternalContext(ExternalContext.newInstance(
+                               null, key, context.getContainerImpl()));
+                       return scopedFactory.create(context);
+                   }finally {
+                       context.setExternalContext(null);
+                   }
+                }
+            });
+        }
+        return this;
+    }
+
+    /**
+     * Ensures a key isn't alredy mapped
+     * @param key
+     */
+    private void checkKey(Key<?> key){
+        if (factories.containsKey(key)){
+            throw new DependencyException(
+                    "Dependency mapping for " + key + " already exists.");
+        }
+    }
+
+    /**
+     * Maps a constant value to the given type and name.
+     * @param type
+     * @param name
+     * @param value
+     * @param <T>
+     * @return
+     */
+    private <T> ContainerBuilder constant(final Class<T> type, final String name,
+                                          final T value){
+        InternalFactory<T> factory = new InternalFactory<T>() {
+            @Override
+            public T create(InternalContext context) {
+                return value;
+            }
+
+            @Override
+            public String toString() {
+               return new LinkedHashMap<String, Object>(){
+                   {
+                       put("type", type);
+                       put("name", name);
+                       put("value", value);
+                   }
+               }.toString();
+            }
+        };
+
+        return factory(Key.newInstance(type, name),factory, Scope.DEFAULT);
+
+    }
+
 }
