@@ -252,4 +252,76 @@ public final class ContainerBuilder {
 
     }
 
+    /**
+     * Maps a constant value to the given name
+     * @param name
+     * @param value
+     * @return
+     */
+    public ContainerBuilder constant(String name, String value){
+        return constant(String.class, name, value);
+    }
+
+    /**
+     * Maps a constant value to the given name.
+     */
+    public ContainerBuilder constant(String name, int value) {
+        return constant(int.class, name, value);
+    }
+
+    /**
+     * Maps a constant value to the given name.
+     */
+    public ContainerBuilder constant(String name, long value) {
+        return constant(long.class, name, value);
+    }
+
+    /**
+     * Maps a constant value to the given name.
+     */
+    public ContainerBuilder constant(String name, boolean value) {
+        return constant(boolean.class, name, value);
+    }
+
+    /**
+     * Maps a constant value to the given name.
+     */
+    public ContainerBuilder constant(String name, double value) {
+        return constant(double.class, name, value);
+    }
+
+    /**
+     * Maps a constant value to the given name.
+     */
+    public ContainerBuilder constant(String name, float value) {
+        return constant(float.class, name, value);
+    }
+
+    /**
+     * Maps a constant value to the given name.
+     */
+    public ContainerBuilder constant(String name, short value) {
+        return constant(short.class, name, value);
+    }
+
+    /**
+     * Maps a constant value to the given name.
+     */
+    public ContainerBuilder constant(String name, char value) {
+        return constant(char.class, name, value);
+    }
+
+    /**
+     * Maps a class to the given name.
+     */
+    public ContainerBuilder constant(String name, Class value) {
+        return constant(Class.class, name, value);
+    }
+
+    /**
+     * Maps an enum to the given name.
+     */
+    public <E extends Enum<E>> ContainerBuilder constant(String name, E value) {
+        return constant(value.getDeclaringClass(), name, value);
+    }
 }
