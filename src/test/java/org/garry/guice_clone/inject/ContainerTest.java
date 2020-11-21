@@ -43,6 +43,8 @@ public class ContainerTest extends TestCase {
     }
 
 
+
+
     static class Foo {
 
         @Inject Bar bar;
@@ -118,6 +120,52 @@ public class ContainerTest extends TestCase {
         @Override
         public Bar getBar() {
             return bar;
+        }
+    }
+
+    public void testCircularlyDependentConstructors(){
+        ContainerBuilder builder = new ContainerBuilder();
+        builder
+                .factory(A.class, AImpl.class)
+                .factory(B.class, BImpl.class);
+        Container container = builder.create(false);
+        A a = container.inject(AImpl.class);
+        assertNotNull(a.getB().getA());
+    }
+
+    interface A {
+        B getB();
+    }
+
+    interface B {
+        A getA();
+    }
+
+    static class AImpl implements A {
+        final B b;
+
+        @Inject
+        public AImpl(B b){
+            this.b = b;
+        }
+
+        @Override
+        public B getB() {
+            return b;
+        }
+    }
+
+    static class BImpl implements B {
+        final A a;
+
+        @Inject
+        public BImpl(A a) {
+            this.a = a;
+        }
+
+        @Override
+        public A getA() {
+            return a;
         }
     }
 }
