@@ -168,4 +168,29 @@ public class ContainerTest extends TestCase {
             return a;
         }
     }
+
+    public void testInjectStatics() {
+        new ContainerBuilder()
+                .constant("s", "test")
+                .constant("i", 5)
+                .injectStatics(Static.class)
+                .create(false);
+
+        assertEquals("test", Static.s);
+        assertEquals(5, Static.i);
+    }
+
+    static class Static {
+
+        @Inject("i")
+        static int i;
+
+        static String s;
+
+        @Inject("s")
+        static void setS(String s){
+            Static.s = s;
+        }
+
+    }
 }

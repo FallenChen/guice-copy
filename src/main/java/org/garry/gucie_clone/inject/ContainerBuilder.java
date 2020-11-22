@@ -324,4 +324,15 @@ public final class ContainerBuilder {
     public <E extends Enum<E>> ContainerBuilder constant(String name, E value) {
         return constant(value.getDeclaringClass(), name, value);
     }
+
+    /**
+     * Upon creation, the {@link Container} will inject static fields and methods
+     * into the given classed
+     * @param types for which static members will be injected
+     * @return
+     */
+    public ContainerBuilder injectStatics(Class<?>... types){
+        staticInjections.addAll(Arrays.asList(types));
+        return this;
+    }
 }

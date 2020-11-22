@@ -1,0 +1,15 @@
+org/garry/guice_clone/inject/ContainerTest.java
+ org.garry.guice_clone.inject.ContainerTest
+ org.garry.guice_clone.inject.ContainerTest$A
+ org.garry.guice_clone.inject.ContainerTest$AImpl
+ org.garry.guice_clone.inject.ContainerTest$B
+ org.garry.guice_clone.inject.ContainerTest$BImpl
+ org.garry.guice_clone.inject.ContainerTest$Bar
+ org.garry.guice_clone.inject.ContainerTest$BarImpl
+ org.garry.guice_clone.inject.ContainerTest$Foo
+ org.garry.guice_clone.inject.ContainerTest$Static
+ org.garry.guice_clone.inject.ContainerTest$Tee
+ org.garry.guice_clone.inject.ContainerTest$TeeImpl
+org/garry/guice_clone/inject/util/FinalizableReferenceQueueTest.java
+ org.garry.guice_clone.inject.util.FinalizableReferenceQueueTest
+ org.garry.guice_clone.inject.util.FinalizableReferenceQueueTest$MockReference
