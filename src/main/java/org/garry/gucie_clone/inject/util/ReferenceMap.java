@@ -27,6 +27,7 @@ import static org.garry.gucie_clone.inject.util.ReferenceType.STRONG;
  * create duplicate values for a given key.
  *
  * <p>In other words, this class is great for caching but not atomicity.
+ * 存在并发问题，主要是为了缓存
  *
  * @param <K>
  * @param <V>
