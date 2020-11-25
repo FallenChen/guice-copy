@@ -1,6 +1,5 @@
 package org.garry.gucie_clone.inject;
 
-import javax.jws.Oneway;
 import java.util.HashMap;
 import java.util.Map;
 

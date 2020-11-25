@@ -379,6 +379,7 @@ class ContainerImpl implements Container {
                 });
     }
 
+    // 在threadlocal新建上下文
     ThreadLocal<InternalContext[]> localContext =
             new ThreadLocal<InternalContext[]>(){
                 @Override
