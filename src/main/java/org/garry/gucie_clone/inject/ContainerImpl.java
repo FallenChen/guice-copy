@@ -442,7 +442,9 @@ class ContainerImpl implements Container {
         });
     }
 
+    // inject 对象进 InternalContext
     void inject(Object o, InternalContext context){
+        // 不会是null？？？
         List<Injector> injectors = this.injectors.get(o.getClass());
         for (Injector injector : injectors){
             injector.inject(context,o);
