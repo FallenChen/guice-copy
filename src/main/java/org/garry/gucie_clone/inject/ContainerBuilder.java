@@ -148,6 +148,7 @@ public final class ContainerBuilder {
 
         // This factory creates new instances of the given implementation.
         // we have to lazy load the constructor because the Container hasn't been created yet
+        // todo 这里是怎么执行的
         InternalFactory<T> factory = new InternalFactory<T>() {
 
             volatile ContainerImpl.ConstructorInjector<? extends T> constructor;

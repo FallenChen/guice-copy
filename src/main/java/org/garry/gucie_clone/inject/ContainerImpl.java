@@ -355,6 +355,7 @@ class ContainerImpl implements Container {
             addInjectorsForMethods(clazz.getDeclaredMethods(), true, injectors);
         }
 
+        //todo 面向接口编程，运行时找到实现类，但这里大部分的做法都是new xx(){...}
         callInContext(new ContextualCallable<Void>(){
             @Override
             public Void call(InternalContext context) {
