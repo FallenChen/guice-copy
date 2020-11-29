@@ -336,4 +336,45 @@ public final class ContainerBuilder {
         staticInjections.addAll(Arrays.asList(types));
         return this;
     }
+
+    public <T> ContainerBuilder factory(Class<T> type,
+                                        Factory<? extends T> factory) {
+        return factory(type, Container.DEFAULT_NAME, factory, Scope.DEFAULT);
+    }
+
+    /**
+     * Maps a factory to a given dependency type and name
+     * @param type of dependency
+     * @param name of dependency
+     * @param factory creates objects to inject
+     * @param scope scope of injected instances
+     * @param <T>
+     * @return
+     */
+    public <T> ContainerBuilder factory(final Class<T> type, final String name,
+                                        final Factory<? extends T> factory, Scope scope){
+
+        InternalFactory<T> internalFactory = new InternalFactory<T>() {
+            @Override
+            public T create(InternalContext context) {
+                Context externalContext = context.getExternalContext();
+                try {
+                    return factory.create(externalContext);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            public String toString() {
+                return new LinkedHashMap<String, Object>() {{
+                    put("type", type);
+                    put("name", name);
+                    put("factory", factory);
+                }}.toString();
+
+            }
+        };
+
+        return factory(Key.newInstance(type,name), internalFactory, scope);
+    }
 }
